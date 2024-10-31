@@ -5,7 +5,7 @@
 #
 
 output "project_id" {
-    value = mongodbatlas_project.this.id
+  value = mongodbatlas_project.this.id
 }
 
 output "project_creation_timestamp" {
