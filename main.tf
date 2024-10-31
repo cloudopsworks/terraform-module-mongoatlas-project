@@ -12,4 +12,5 @@ data "mongodbatlas_organizations" "this" {
 resource "mongodbatlas_project" "this" {
   name   = var.name != "" ? var.name : format("%s-%s", var.name_prefix, local.system_name)
   org_id = var.organization_id != "" ? var.organization_id : data.mongodbatlas_organizations.this[0].id
+  tags = local.all_tags
 }
