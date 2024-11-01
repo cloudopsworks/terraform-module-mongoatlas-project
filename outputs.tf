@@ -4,6 +4,10 @@
 #            Distributed Under Apache v2.0 License
 #
 
+output "project_name" {
+  value = mongodbatlas_project.this.name
+}
+
 output "project_id" {
   value = mongodbatlas_project.this.id
 }
