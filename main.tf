@@ -20,9 +20,9 @@ resource "mongodbatlas_project" "this" {
 resource "mongodbatlas_backup_compliance_policy" "this" {
   count                      = try(var.settings.backup_compliance.enabled, false) ? 1 : 0
   project_id                 = mongodbatlas_project.this.id
-  authorized_email           = var.settings.backup_compliance.authorized.email
-  authorized_user_first_name = var.settings.backup_compliance.authorized.user_first_name
-  authorized_user_last_name  = var.settings.backup_compliance.authorized.user_last_name
+  authorized_email           = var.settings.backup_compliance.authorized_user.email
+  authorized_user_first_name = var.settings.backup_compliance.authorized_user.first_name
+  authorized_user_last_name  = var.settings.backup_compliance.authorized_user.last_name
   copy_protection_enabled    = try(var.settings.backup_compliance.copy_protection_enabled, false)
   pit_enabled                = try(var.settings.backup_compliance.pit_enabled, false)
   encryption_at_rest_enabled = try(var.settings.backup_compliance.encryption_at_rest_enabled, false)
