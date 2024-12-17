@@ -28,7 +28,7 @@ variable "organization_id" {
   default     = ""
 }
 
-variable "backup_compliance" {
+variable "settings" {
   description = "(optional) The backup compliance policy"
   type        = any
   default     = {}
