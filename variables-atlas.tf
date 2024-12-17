@@ -27,3 +27,9 @@ variable "organization_id" {
   type        = string
   default     = ""
 }
+
+variable "backup_compliance" {
+  description = "(optional) The backup compliance policy"
+  type        = any
+  default     = {}
+}

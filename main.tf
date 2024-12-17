@@ -16,3 +16,63 @@ resource "mongodbatlas_project" "this" {
     k => replace(v, "/[/$%&#]/", "+")
   }
 }
+
+resource "mongodbatlas_backup_compliance_policy" "this" {
+  count                      = try(var.backup_compliance.enabled, false) ? 1 : 0
+  project_id                 = mongodbatlas_project.this.id
+  authorized_email           = var.backup_compliance.authorized.email
+  authorized_user_first_name = var.backup_compliance.authorized.user_first_name
+  authorized_user_last_name  = var.backup_compliance.authorized.user_last_name
+  copy_protection_enabled    = try(var.backup_compliance.copy_protection_enabled, false)
+  pit_enabled                = try(var.backup_compliance.pit_enabled, false)
+  encryption_at_rest_enabled = try(var.backup_compliance.encryption_at_rest_enabled, false)
+  restore_window_days        = try(var.backup_compliance.restore_window_days, 7)
+  dynamic "policy_item_hourly" {
+    for_each = length(try(var.backup_compliance.hourly, {})) > 0 ? [var.backup_compliance.hourly] : []
+    content {
+      frequency_interval = try(policy_item_hourly.value.interval, 1)
+      retention_unit     = try(policy_item_hourly.value.retention_unit, "days")
+      retention_value    = try(policy_item_hourly.value.retention_value, 1)
+    }
+  }
+  dynamic "policy_item_daily" {
+    for_each = length(try(var.backup_compliance.daily, {})) > 0 ? [var.backup_compliance.daily] : []
+    content {
+      frequency_interval = try(policy_item_daily.value.interval, 1)
+      retention_unit     = try(policy_item_daily.value.retention_unit, "days")
+      retention_value    = try(policy_item_daily.value.retention_value, 7)
+    }
+  }
+  dynamic "policy_item_weekly" {
+    for_each = length(try(var.backup_compliance.weekly, {})) > 0 ? [var.backup_compliance.weekly] : []
+    content {
+      frequency_interval = try(policy_item_weekly.value.interval, 1)
+      retention_unit     = try(policy_item_weekly.value.retention_unit, "weeks")
+      retention_value    = try(policy_item_weekly.value.retention_value, 4)
+    }
+  }
+  dynamic "policy_item_monthly" {
+    for_each = length(try(var.backup_compliance.monthly, {})) > 0 ? [var.backup_compliance.monthly] : []
+    content {
+      frequency_interval = try(policy_item_monthly.value.interval, 1)
+      retention_unit     = try(policy_item_monthly.value.retention_unit, "months")
+      retention_value    = try(policy_item_monthly.value.retention_value, 12)
+    }
+  }
+  dynamic "policy_item_yearly" {
+    for_each = length(try(var.backup_compliance.yearly, {})) > 0 ? [var.backup_compliance.yearly] : []
+    content {
+      frequency_interval = try(policy_item_yearly.value.interval, 1)
+      retention_unit     = try(policy_item_yearly.value.retention_unit, "years")
+      retention_value    = try(policy_item_yearly.value.retention_value, 2)
+    }
+  }
+  dynamic "on_demand_policy_item" {
+    for_each = length(try(var.backup_compliance.on_demand, {})) > 0 ? [var.backup_compliance.on_demand] : []
+    content {
+      frequency_interval = try(on_demand_policy_item.value.interval, 1)
+      retention_unit     = try(on_demand_policy_item.value.retention_unit, "days")
+      retention_value    = try(on_demand_policy_item.value.retention_value, 7)
+    }
+  }
+}
