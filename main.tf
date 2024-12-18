@@ -76,3 +76,14 @@ resource "mongodbatlas_backup_compliance_policy" "this" {
     }
   }
 }
+
+resource "mongodbatlas_maintenance_window" "this" {
+  count                   = try(var.settings.maintenance.enabled, false) ? 1 : 0
+  project_id              = mongodbatlas_project.this.id
+  day_of_week             = try(var.settings.maintenance.day_of_week, 1)
+  hour_of_day             = try(var.settings.maintenance.hour_of_day, 0)
+  start_asap              = try(var.settings.maintenance.start_asap, null)
+  defer                   = try(var.settings.maintenance.defer, null)
+  auto_defer              = try(var.settings.maintenance.auto_defer, null)
+  auto_defer_once_enabled = try(var.settings.maintenance.auto_defer_once_enabled, null)
+}
