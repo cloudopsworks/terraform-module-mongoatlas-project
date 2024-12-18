@@ -16,3 +16,6 @@ output "project_creation_timestamp" {
   value = mongodbatlas_project.this.created
 }
 
+output "project_backup_policy_id" {
+  value = try(var.settings.backup_compliance.enabled, false) ? mongodbatlas_backup_compliance_policy.this.id : null
+}
