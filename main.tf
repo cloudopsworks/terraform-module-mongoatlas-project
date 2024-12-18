@@ -10,8 +10,14 @@ data "mongodbatlas_organizations" "this" {
 }
 
 resource "mongodbatlas_project" "this" {
-  name   = var.name != "" ? var.name : format("%s-%s", var.name_prefix, local.system_name_plain)
-  org_id = var.organization_id != "" ? var.organization_id : data.mongodbatlas_organizations.this[0].id
+  name                                             = var.name != "" ? var.name : format("%s-%s", var.name_prefix, local.system_name_plain)
+  org_id                                           = var.organization_id != "" ? var.organization_id : data.mongodbatlas_organizations.this[0].id
+  with_default_alerts_settings                     = try(var.settings.default_alerts_settings, null)
+  is_collect_database_specifics_statistics_enabled = try(var.settings.collect_database_specifics_statistics_enabled, null)
+  is_data_explorer_enabled                         = try(var.settings.data_explorer_enabled, null)
+  is_extended_storage_sizes_enabled                = try(var.settings.extended_storage_sizes_enabled, null)
+  is_performance_advisor_enabled                   = try(var.settings.performance_advisor_enabled, null)
+  is_schema_advisor_enabled                        = try(var.settings.schema_advisor_enabled, null)
   tags = { for k, v in local.all_tags :
     k => replace(v, "/[/$%&#]/", "+")
   }
@@ -86,4 +92,14 @@ resource "mongodbatlas_maintenance_window" "this" {
   defer                   = try(var.settings.maintenance.defer, null)
   auto_defer              = try(var.settings.maintenance.auto_defer, null)
   auto_defer_once_enabled = try(var.settings.maintenance.auto_defer_once_enabled, null)
+}
+
+resource "mongodbatlas_project_ip_access_list" "this" {
+  for_each           = try(var.settings.access_list, {})
+  project_id         = mongodbatlas_project.this.id
+  ip_address         = try(each.value.ip_address, null)
+  comment            = try(each.value.comment, null)
+  aws_security_group = try(each.value.security_group, null)
+  cidr_block         = try(each.value.cidr_block, null)
+
 }
