@@ -4,13 +4,17 @@
 #            Distributed Under Apache v2.0 License
 #
 
+locals {
+  atlas_name = var.name != "" ? var.name : format("%s-%s", var.name_prefix, local.system_name_plain)
+}
+
 data "mongodbatlas_organizations" "this" {
   count = var.organization_name != "" ? 1 : 0
   name  = var.organization_name
 }
 
 resource "mongodbatlas_project" "this" {
-  name                                             = var.name != "" ? var.name : format("%s-%s", var.name_prefix, local.system_name_plain)
+  name                                             = local.atlas_name
   org_id                                           = var.organization_id != "" ? var.organization_id : data.mongodbatlas_organizations.this[0].id
   with_default_alerts_settings                     = try(var.settings.default_alerts_settings, null)
   is_collect_database_specifics_statistics_enabled = try(var.settings.collect_database_specifics_statistics_enabled, null)

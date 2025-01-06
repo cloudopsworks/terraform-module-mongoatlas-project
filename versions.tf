@@ -11,5 +11,8 @@ terraform {
     mongodbatlas = {
       source = "mongodb/mongodbatlas"
     }
+    aws = {
+      source = "hashicorp/aws"
+    }
   }
 }
