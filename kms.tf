@@ -55,6 +55,7 @@ resource "aws_iam_role" "kms" {
   count              = try(var.settings.encryption_at_rest.enabled, false) ? 1 : 0
   name               = "mongodbatlas-${local.system_name}-kms"
   assume_role_policy = data.aws_iam_policy_document.kms_assume_role[count.index].json
+  tags               = local.all_tags
 }
 
 data "aws_iam_policy_document" "kms_policy" {
