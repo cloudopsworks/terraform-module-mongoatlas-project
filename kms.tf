@@ -41,11 +41,11 @@ data "aws_iam_policy_document" "kms_assume_role" {
     actions = ["sts:AssumeRole"]
     principals {
       type        = "AWS"
-      identifiers = ["arn:aws:iam::${mongodbatlas_cloud_provider_access_setup.this[count.index].aws_config.atlas_aws_account_arn}:root"]
+      identifiers = [mongodbatlas_cloud_provider_access_setup.this[count.index].aws_config[0].atlas_aws_account_arn]
     }
     condition {
       test     = "StringEquals"
-      values   = [mongodbatlas_cloud_provider_access_setup.this[count.index].aws_config.atlas_assumed_role_external_id]
+      values   = [mongodbatlas_cloud_provider_access_setup.this[count.index].aws_config[0].atlas_assumed_role_external_id]
       variable = "sts:ExternalId"
     }
   }
