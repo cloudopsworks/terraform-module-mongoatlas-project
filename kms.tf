@@ -25,6 +25,7 @@ resource "mongodbatlas_cloud_provider_access_authorization" "this" {
 
 resource "mongodbatlas_encryption_at_rest" "this" {
   count      = try(var.settings.encryption_at_rest.enabled, false) ? 1 : 0
+  depends_on = [aws_iam_role.kms, aws_iam_role_policy.kms, aws_kms_key.kms, aws_kms_alias.kms]
   project_id = mongodbatlas_project.this.id
   aws_kms_config {
     enabled                = true
@@ -61,7 +62,7 @@ resource "aws_iam_role" "kms" {
 data "aws_iam_policy_document" "kms_policy" {
   count = try(var.settings.encryption_at_rest.enabled, false) ? 1 : 0
   statement {
-    sid = "AllowAtlasToUseKMS"
+    sid    = "AllowAtlasToUseKMS"
     effect = "Allow"
     actions = [
       "kms:Decrypt",
