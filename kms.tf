@@ -61,6 +61,7 @@ resource "aws_iam_role" "kms" {
 data "aws_iam_policy_document" "kms_policy" {
   count = try(var.settings.encryption_at_rest.enabled, false) ? 1 : 0
   statement {
+    sid = "AllowAtlasToUseKMS"
     effect = "Allow"
     actions = [
       "kms:Decrypt",
@@ -79,6 +80,7 @@ data "aws_iam_policy_document" "kms_policy" {
 resource "aws_iam_role_policy" "kms" {
   count  = try(var.settings.encryption_at_rest.enabled, false) ? 1 : 0
   role   = aws_iam_role.kms[count.index].name
+  name   = "kms_access"
   policy = data.aws_iam_policy_document.kms_policy[count.index].json
 }
 
