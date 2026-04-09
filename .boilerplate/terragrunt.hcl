@@ -24,6 +24,24 @@ include "root" {
   path = find_in_parent_folders("{{ .RootFileName }}")
 }
 
+generate "provider-mongoatlas" {
+  path      = "provider-mongoatlas.g.tf"
+  if_exists = "overwrite_terragrunt"
+  contents  = <<EOF
+provider "mongodbatlas" {
+  assume_role {
+    role_arn     = "${local.global_vars.mongodb_atlas.secrets.sts_role_arn}"
+  }
+  aws_access_key_id     = "${get_env("AWS_ACCESS_KEY_ID", "")}"
+  aws_secret_access_key = "${get_env("AWS_SECRET_ACCESS_KEY", "")}"
+  aws_session_token     = "${get_env("AWS_SESSION_TOKEN", "")}"
+  secret_name           = "${local.global_vars.mongodb_atlas.secrets.name}"
+  region                = "${local.global_vars.mongodb_atlas.secrets.region}"
+  sts_endpoint          = "${local.global_vars.mongodb_atlas.secrets.sts_endpoint}"
+}
+EOF
+}
+
 terraform {
   source = "{{ .sourceUrl }}"
 }
