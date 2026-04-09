@@ -7,9 +7,6 @@
 #     Distributed Under Apache v2.0 License
 #
 
-data "mongodbatlas_roles_org_id" "current" {}
-
-data "mongodbatlas_organizations" "this" {
-  count = var.organization_name != "" ? 1 : 0
-  name  = var.organization_name
+locals {
+  system_name_plain = format("%s-%s-%s", lower(var.org.organization_unit), lower(var.org.environment_name), lower(var.org.environment_type))
 }

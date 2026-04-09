@@ -1,1 +1,160 @@
-# Module configuration
+# Module-specific inputs for terraform-module-mongoatlas-project
+#
+# Variables injected automatically by the Terragrunt hierarchy — DO NOT set here:
+#   is_hub    — injected by the boilerplate/template engine
+#   spoke_def — sourced from spoke-inputs.yaml
+#   org       — sourced from env-inputs.yaml
+#   extra_tags — built from merged tag files (local-tags.json, env-tags.json, etc.)
+
+# ── Project naming ─────────────────────────────────────────────────────────────
+# Use `name` for an explicit project name, or `name_prefix` to prepend to the
+# auto-generated name (<name_prefix>-<org_unit>-<env_name>-<env_type>-<spoke>).
+
+name_prefix: ""     # (Optional) Prefix prepended to the auto-generated Atlas project name. Default: "".
+# name: ""          # (Optional) Explicit project name; when set, overrides name_prefix. Default: "".
+
+# ── Atlas organisation ─────────────────────────────────────────────────────────
+# Provide exactly one of organization_id (preferred) or organization_name.
+# organization_id takes precedence when both are set.
+
+organization_id: ""       # (Optional) Direct MongoDB Atlas organization ID. Default: "".
+# organization_name: ""   # (Optional) Atlas org name resolved via data source lookup. Default: "".
+
+# ── Feature settings ───────────────────────────────────────────────────────────
+settings:
+  # Project-level feature flags (all optional)
+  default_alerts_settings: true                       # (Optional) Keep Atlas default alert settings enabled. Default: null.
+  collect_database_specifics_statistics_enabled: true # (Optional) Collect database-specific statistics. Default: null.
+  data_explorer_enabled: true                         # (Optional) Enable Data Explorer UI. Default: null.
+  extended_storage_sizes_enabled: false               # (Optional) Allow extended storage tiers. Default: null.
+  performance_advisor_enabled: true                   # (Optional) Enable Performance Advisor. Default: null.
+  schema_advisor_enabled: true                        # (Optional) Enable Schema Advisor. Default: null.
+
+  # Backup compliance policy
+  # WARNING: Once enabled this policy is immutable and cannot be disabled without Atlas support.
+  backup_compliance:
+    enabled: false                       # (Optional) Enforce backup compliance policy. Default: false.
+    authorized_user:
+      email: ""                          # (Required when enabled) Authorised user email address.
+      first_name: ""                     # (Required when enabled) Authorised user first name.
+      last_name: ""                      # (Required when enabled) Authorised user last name.
+    copy_protection_enabled: false       # (Optional) Prevent backup copy deletion. Default: false.
+    pit_enabled: false                   # (Optional) Enable Point-in-Time recovery. Default: false.
+    encryption_at_rest_enabled: false    # (Optional) Require all backups to be encrypted. Default: false.
+    restore_window_days: 7               # (Optional) Restore window in days. Default: 7.
+    hourly:
+      interval: 6                        # (Optional) Snapshot every N hours (1,2,4,6,8,12). Default: 1.
+      retention_unit: "days"             # (Optional) Retention unit. Values: "days". Default: "days".
+      retention_value: 2                 # (Optional) Number of units to retain. Default: 1.
+    daily:
+      interval: 1                        # (Optional) Must be 1. Default: 1.
+      retention_unit: "days"             # (Optional) Retention unit. Values: "days". Default: "days".
+      retention_value: 7                 # (Optional) Number of units to retain. Default: 7.
+    weekly:
+      interval: 6                        # (Optional) Day of week (1=Sunday … 7=Saturday). Default: 1.
+      retention_unit: "weeks"            # (Optional) Retention unit. Values: "weeks". Default: "weeks".
+      retention_value: 4                 # (Optional) Number of units to retain. Default: 4.
+    monthly:
+      interval: 28                       # (Optional) Day of month (1–28). Default: 1.
+      retention_unit: "months"           # (Optional) Retention unit. Values: "months". Default: "months".
+      retention_value: 12                # (Optional) Number of units to retain. Default: 12.
+    yearly:
+      interval: 1                        # (Optional) Month of year (1–12). Default: 1.
+      retention_unit: "years"            # (Optional) Retention unit. Values: "years". Default: "years".
+      retention_value: 2                 # (Optional) Number of units to retain. Default: 2.
+    on_demand:
+      interval: 0                        # (Optional) Must be 0. Default: 1.
+      retention_unit: "days"             # (Optional) Retention unit. Values: "days". Default: "days".
+      retention_value: 7                 # (Optional) Number of units to retain. Default: 7.
+
+  # Maintenance window
+  maintenance:
+    enabled: false                       # (Optional) Enable a scheduled maintenance window. Default: false.
+    day_of_week: 1                       # (Optional) Day of week (1=Sunday … 7=Saturday). Default: 1.
+    hour_of_day: 0                       # (Optional) Hour in UTC (0–23). Default: 0.
+    defer: null                          # (Optional) Defer the next maintenance occurrence. Default: null.
+    auto_defer: null                     # (Optional) Automatically defer maintenance. Default: null.
+    auto_defer_once_enabled: null        # (Optional) Auto-defer once. Default: null.
+
+  # IP access list
+  # Map keyed by a unique entry ID. Each entry allows exactly one of: ip_address, cidr_block, aws_security_group.
+  access_list: {}
+  # access_list:
+  #   office:
+  #     cidr_block: "203.0.113.0/24"    # (Optional) CIDR block. Conflicts with ip_address and aws_security_group.
+  #     comment: "Office network"       # (Optional) Human-readable label for this entry.
+  #   bastion:
+  #     ip_address: "198.51.100.5"      # (Optional) Single IP address. Conflicts with cidr_block and aws_security_group.
+  #     comment: "Bastion host"
+  #   app_sg:
+  #     aws_security_group: "sg-0abc123def456" # (Optional) AWS SG ID. Conflicts with ip_address and cidr_block.
+  #     comment: "Application security group"
+
+  # AWS KMS encryption at rest
+  # When enabled, an AWS KMS CMK and IAM role are provisioned in the same AWS account and region,
+  # and wired to the Atlas project for Customer-Managed Key (CMK) encryption.
+  # Note: The AWS region is derived from the AWS provider; Atlas receives it as UPPER_UNDERSCORE format
+  #       (e.g. "us-east-1" → "US_EAST_1").
+  encryption_at_rest:
+    enabled: false                       # (Optional) Provision KMS key and enable CMK encryption. Default: false.
+    deletion_window_in_days: 7           # (Optional) KMS key pending-deletion window in days (7–30). Default: 7.
+    enable_key_rotation: true            # (Optional) Enable automatic KMS key rotation. Default: true.
+    rotation_period_in_days: 90          # (Optional) Key rotation period in days (90–2560). Default: 90.
+    multi_region: false                  # (Optional) Create a multi-region KMS key. Default: false.
+
+  # Alert configurations
+  # List of alert rules. The built-in AWS_ENCRYPTION_KEY_NEEDS_ROTATION alert is managed separately
+  # and must not be included here.
+  # Full event type reference: https://www.mongodb.com/docs/atlas/reference/api-resources-spec/v2/#tag/Alert-Configurations
+  alerts: []
+  # alerts:
+  #   - event_type: "REPLICATION_OPLOG_WINDOW_RUNNING_OUT"  # (Required) Atlas event type identifier.
+  #     enabled: true                                        # (Optional) Enable this alert. Default: true.
+  #     notifications:
+  #       - type_name: "GROUP"                              # (Required) Notification target type.
+  #                                                         #   Values: EMAIL, SMS, GROUP, ORG, TEAM, SLACK,
+  #                                                         #           DATADOG, OPS_GENIE, VICTOR_OPS,
+  #                                                         #           WEBHOOK, MICROSOFT_TEAMS, PAGER_DUTY.
+  #         roles: ["GROUP_OWNER"]                          # (Optional) Project roles to notify.
+  #         interval_min: 60                                # (Optional) Re-notification interval (minutes).
+  #         delay_min: 0                                    # (Optional) Delay before first notification (minutes).
+  #         email_enabled: true                             # (Optional) Send email. Required for PROJECT_OWNER type.
+  #         # Slack-specific:
+  #         # api_token: ""                                 # (Optional) Slack API token. Required for SLACK type.
+  #         # channel_name: ""                              # (Optional) Slack channel. Required for SLACK type.
+  #         # Datadog-specific:
+  #         # datadog_api_key: ""                           # (Optional) Datadog API key. Required for DATADOG type.
+  #         # datadog_region: "US"                          # (Optional) Values: "US", "EU". Required for DATADOG type.
+  #         # PagerDuty-specific:
+  #         # service_key: ""                               # (Optional) Service key. Required for PAGER_DUTY type.
+  #         # OpsGenie-specific:
+  #         # ops_genie_api_key: ""                         # (Optional) API key. Required for OPS_GENIE type.
+  #         # ops_genie_region: "US"                        # (Optional) Values: "US", "EU".
+  #         # VictorOps-specific:
+  #         # victor_ops_api_key: ""                        # (Optional) API key. Required for VICTOR_OPS type.
+  #         # victor_ops_routing_key: ""                    # (Optional) Routing key.
+  #         # Webhook-specific:
+  #         # webhook_url: ""                               # (Optional) Webhook URL. Required for WEBHOOK type.
+  #         # webhook_secret: ""                            # (Optional) HMAC secret. Required for WEBHOOK type.
+  #         # Microsoft Teams-specific:
+  #         # microsoft_teams_webhook_url: ""               # (Optional) Webhook URL. Required for MICROSOFT_TEAMS type.
+  #     threshold_config:
+  #       operator: "LESS_THAN"                            # (Optional) Values: GREATER_THAN, LESS_THAN.
+  #       threshold: 1                                     # (Optional) Numeric threshold value.
+  #       units: "HOURS"                                   # (Optional) Threshold units (e.g. HOURS, DAYS, MEGABYTES).
+  #     # metric_threshold_config:                         # Use instead of threshold_config for metric-based alerts.
+  #     #   metric_name: ""                                # (Optional) Atlas metric name.
+  #     #   operator: "GREATER_THAN"                       # (Optional) Values: GREATER_THAN, LESS_THAN.
+  #     #   threshold: 0                                   # (Optional) Numeric threshold.
+  #     #   units: ""                                      # (Optional) Metric units.
+  #     #   mode: "AVERAGE"                                # (Optional) Values: AVERAGE, TOTAL, MAXIMUM, MINIMUM.
+  #     # matchers:
+  #     #   - field_name: "TYPE_NAME"                      # (Optional) Values: TYPE_NAME, HOSTNAME, PORT,
+  #     #                                                  #   HOSTNAME_AND_PORT, REPLICA_SET_NAME,
+  #     #                                                  #   SHARD_NAME, CLUSTER_NAME.
+  #     #     operator: "EQUALS"                           # (Optional) Values: EQUALS, NOT_EQUALS, CONTAINS,
+  #     #                                                  #   NOT_CONTAINS, STARTS_WITH, ENDS_WITH, REGEX.
+  #     #     value: ""                                    # (Optional) Value to match.
+
+# ── Import ─────────────────────────────────────────────────────────────────────
+# generate_import: false  # (Optional) Generate OpenTofu import blocks for existing Atlas resources. Default: false.
