@@ -186,5 +186,4 @@ variable "encryption_provider_config" {
   description = "(Optional) Cloud-provider-specific encryption configuration passed from the cloud module. AWS: IAM role ARN + KMS key ARN + region. GCP: KMS key version resource ID. AZURE: subscription ID + resource group + key vault name + key identifier. Auth identifiers (GCP SA email, Azure app/SP/tenant) are sourced from mongodbatlas_cloud_provider_access_setup outputs."
   type        = any
   default     = {}
-  sensitive   = true
 }
