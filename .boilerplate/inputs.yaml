@@ -90,21 +90,18 @@ settings:
   #     aws_security_group: "sg-0abc123def456" # (Optional) AWS SG ID. Conflicts with ip_address and cidr_block.
   #     comment: "Application security group"
 
-  # AWS KMS encryption at rest
-  # When enabled, an AWS KMS CMK and IAM role are provisioned in the same AWS account and region,
-  # and wired to the Atlas project for Customer-Managed Key (CMK) encryption.
-  # Note: The AWS region is derived from the AWS provider; Atlas receives it as UPPER_UNDERSCORE format
-  #       (e.g. "us-east-1" → "US_EAST_1").
+  # Encryption at rest — enable CMK encryption for the Atlas project.
+  # Pair this with the top-level encryption_provider and encryption_provider_config variables.
   encryption_at_rest:
-    enabled: false                       # (Optional) Provision KMS key and enable CMK encryption. Default: false.
-    deletion_window_in_days: 7           # (Optional) KMS key pending-deletion window in days (7–30). Default: 7.
-    enable_key_rotation: true            # (Optional) Enable automatic KMS key rotation. Default: true.
-    rotation_period_in_days: 90          # (Optional) Key rotation period in days (90–2560). Default: 90.
-    multi_region: false                  # (Optional) Create a multi-region KMS key. Default: false.
+    enabled: false                       # (Optional) Enable Customer-Managed Key encryption. Default: false.
+
+  # Alert event types excluded from this module's managed alert for_each loop.
+  # Use this when a cloud companion module manages certain alert types (e.g. AWS_ENCRYPTION_KEY_NEEDS_ROTATION)
+  # to prevent duplicate resource conflicts.
+  excluded_alert_event_types: []         # (Optional) List of event_type strings to exclude. Default: [].
 
   # Alert configurations
-  # List of alert rules. The built-in AWS_ENCRYPTION_KEY_NEEDS_ROTATION alert is managed separately
-  # and must not be included here.
+  # List of alert rules.
   # Full event type reference: https://www.mongodb.com/docs/atlas/reference/api-resources-spec/v2/#tag/Alert-Configurations
   alerts: []
   # alerts:
@@ -155,6 +152,34 @@ settings:
   #     #     operator: "EQUALS"                           # (Optional) Values: EQUALS, NOT_EQUALS, CONTAINS,
   #     #                                                  #   NOT_CONTAINS, STARTS_WITH, ENDS_WITH, REGEX.
   #     #     value: ""                                    # (Optional) Value to match.
+
+# ── Encryption provider ────────────────────────────────────────────────────────
+# Plain string — must NOT reference cloud resource attributes to avoid Terraform dependency cycles.
+# The cloud companion module reads cloud_provider_setup_aws_account_arn / gcp_service_account /
+# azure_app_id outputs from this module to build its own resources, then passes their
+# attributes back via encryption_provider_config.
+encryption_provider: ""   # (Optional) Cloud provider for CMK encryption. Values: "AWS", "GCP", "AZURE". Default: "".
+
+# Cloud-specific key configuration — populated by the cloud companion module.
+# NOTE: Do NOT include provider name here; use encryption_provider above instead.
+# NOTE: Auth identifiers (GCP SA email, Azure app/SP/tenant) come from
+#       mongodbatlas_cloud_provider_access_setup outputs, not from here.
+# (Sensitive — contains key ARNs / identifiers.)
+encryption_provider_config: {}
+# AWS-specific keys:
+#   iam_assumed_role_arn: ""          # (Required for AWS) ARN of the IAM role Atlas will assume.
+#   customer_master_key_id: ""        # (Required for AWS) ARN of the AWS KMS customer master key.
+#   region: "US_EAST_1"              # (Required for AWS) Atlas-format region (UPPER_UNDERSCORE, e.g. "US_EAST_1").
+#                                    #   Note: AWS provider region "us-east-1" → Atlas "US_EAST_1".
+# GCP-specific keys:
+#   key_version_resource_id: ""       # (Required for GCP) Full resource name of the GCP KMS crypto key version.
+# AZURE-specific keys (client_id, tenant_id sourced from cloud_provider_access_setup outputs):
+#   azure_environment: "AZURE"        # (Optional) Azure cloud. Values: AZURE, AZURE_CHINA, AZURE_GERMANY,
+#                                    #   AZURE_US_GOVERNMENT. Default: "AZURE".
+#   subscription_id: ""              # (Required for AZURE) Azure subscription ID.
+#   resource_group_name: ""          # (Required for AZURE) Resource group containing the Key Vault.
+#   key_vault_name: ""               # (Required for AZURE) Name of the Azure Key Vault.
+#   key_identifier: ""               # (Required for AZURE) Versioned URI of the Key Vault key.
 
 # ── Import ─────────────────────────────────────────────────────────────────────
 # generate_import: false  # (Optional) Generate OpenTofu import blocks for existing Atlas resources. Default: false.

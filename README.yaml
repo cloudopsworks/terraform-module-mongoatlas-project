@@ -1,12 +1,12 @@
-name: Terraform Transit Gateway Module
+name: Terraform MongoDB Atlas Project Module
 #logo: logo/logo.jpg
 badges:
   - name: Latest Release
-    image: https://img.shields.io/github/release/<owner/repo>.svg?style=for-the-badge
-    url: https://github.com/<owner/repo>/releases/latest
+    image: https://img.shields.io/github/release/cloudopsworks/terraform-module-mongoatlas-project.svg?style=for-the-badge
+    url: https://github.com/cloudopsworks/terraform-module-mongoatlas-project/releases/latest
   - name: Last Updated
-    image: https://img.shields.io/github/last-commit/<owner/repo>.svg?style=for-the-badge
-    url: https://github.com/<owner/repo>/commits
+    image: https://img.shields.io/github/last-commit/cloudopsworks/terraform-module-mongoatlas-project.svg?style=for-the-badge
+    url: https://github.com/cloudopsworks/terraform-module-mongoatlas-project/commits
 
 license: "APACHE2"
 
@@ -15,23 +15,354 @@ copyrights:
     url: "https://cloudopsworks.co"
     year: "2026"
 
-github_repo: <owner/repo>
+github_repo: cloudopsworks/terraform-module-mongoatlas-project
 
 description: |-
-  <description>
+  Terraform module for managing MongoDB Atlas projects with full lifecycle support.
+  Handles project creation, backup compliance policies, maintenance windows, IP access
+  lists, configurable alert rules, and customer-managed encryption at rest for AWS KMS,
+  GCP Cloud KMS, and Azure Key Vault — all wired through the MongoDB Atlas cloud-provider
+  access (federated authentication) pattern to avoid IAM credential embedding.
 
-# Introduction to the project
 introduction: |-
-#  This is an introduction.
+  This module provisions and manages a [MongoDB Atlas](https://www.mongodb.com/atlas) project
+  and its associated configuration resources using the
+  [mongodb/mongodbatlas](https://registry.terraform.io/providers/mongodb/mongodbatlas/latest)
+  Terraform provider.
 
-# How to use this project
+  ### What it manages
+
+  | Resource | Description |
+  |---|---|
+  | `mongodbatlas_project` | Core project with feature flags and tagging |
+  | `mongodbatlas_backup_compliance_policy` | Immutable backup retention rules (hourly → yearly + on-demand) |
+  | `mongodbatlas_maintenance_window` | Scheduled maintenance day/hour with optional auto-defer |
+  | `mongodbatlas_project_ip_access_list` | IP, CIDR, or AWS security-group access entries |
+  | `mongodbatlas_alert_configuration` | Flexible alert rules with multi-channel notifications |
+  | `mongodbatlas_cloud_provider_access_setup` | Cloud-provider federation (AWS IAM role, GCP SA, Azure SP) |
+  | `mongodbatlas_cloud_provider_access_authorization` | Authorizes the federated identity |
+  | `mongodbatlas_encryption_at_rest` | Customer-managed key encryption (AWS KMS / GCP KMS / Azure Key Vault) |
+
+  ### Project naming
+
+  The Atlas project name is resolved in this order:
+
+  1. `name` variable — used verbatim when set.
+  2. `name_prefix` + auto-generated suffix — `<name_prefix>-<org_unit>-<env_name>-<env_type>`.
+
+  ### Encryption at rest
+
+  Encryption at rest is enabled through two separate variables to avoid Terraform dependency
+  cycles between the Atlas module and the cloud-provider module that provisions the KMS key:
+
+  - `encryption_provider` — plain string (`"AWS"`, `"GCP"`, or `"AZURE"`).
+    This controls whether `mongodbatlas_cloud_provider_access_setup` is created.
+    The cloud module can read the resulting outputs (role ARN, GCP SA email, Azure app ID)
+    to build its own resources, then pass their attributes back via `encryption_provider_config`.
+  - `encryption_provider_config` — cloud-specific key identifiers and (for AWS) the IAM role ARN.
+
+  ### Alert import helper
+
+  Setting `generate_import = true` produces two outputs:
+
+  - `imported_alert_statement` — ready-to-run `tofu import` commands for every existing alert.
+  - `imported_alert_json` — JSON representation of current alerts suitable for copying into
+    the `settings.alerts` list.
+
 usage: |-
+  ```hcl
+  # terragrunt.hcl (deployment-level override)
+  terraform {
+    source = "git::https://github.com/cloudopsworks/terraform-module-mongoatlas-project.git//?ref=v1.0.0"
+  }
 
-# Example usage
+  inputs = {
+    # ── Project naming ─────────────────────────────────────────────
+    name_prefix: ""         # (Optional) Prefix prepended to auto-generated name. Default: "".
+    # name: ""              # (Optional) Explicit project name; overrides name_prefix. Default: "".
+
+    # ── Atlas organisation ─────────────────────────────────────────
+    organization_id: ""     # (Optional) Direct MongoDB Atlas org ID. Default: "".
+    # organization_name: "" # (Optional) Atlas org name resolved via data source. Default: "".
+
+    # ── Module settings ────────────────────────────────────────────
+    settings: {
+      # Project-level feature flags
+      default_alerts_settings: true                       # (Optional) Keep Atlas default alert settings. Default: null.
+      collect_database_specifics_statistics_enabled: true # (Optional) Collect DB-specific statistics. Default: null.
+      data_explorer_enabled: true                         # (Optional) Enable Data Explorer UI. Default: null.
+      extended_storage_sizes_enabled: false               # (Optional) Allow extended storage tiers. Default: null.
+      performance_advisor_enabled: true                   # (Optional) Enable Performance Advisor. Default: null.
+      schema_advisor_enabled: true                        # (Optional) Enable Schema Advisor. Default: null.
+
+      # Backup compliance policy
+      # WARNING: Once enabled this policy cannot be disabled without Atlas support.
+      backup_compliance: {
+        enabled: false                    # (Optional) Enforce backup compliance. Default: false.
+        authorized_user: {
+          email: ""                       # (Required when enabled) Authorised user email.
+          first_name: ""                  # (Required when enabled) Authorised user first name.
+          last_name: ""                   # (Required when enabled) Authorised user last name.
+        }
+        copy_protection_enabled: false    # (Optional) Prevent backup deletion. Default: false.
+        pit_enabled: false                # (Optional) Enable Point-in-Time recovery. Default: false.
+        encryption_at_rest_enabled: false # (Optional) Require backups to be encrypted. Default: false.
+        restore_window_days: 7            # (Optional) Restore window in days. Default: 7.
+        hourly: {
+          interval: 6                     # (Optional) Snapshot every N hours (1,2,4,6,8,12). Default: 1.
+          retention_unit: "days"          # (Optional) Retention unit. Values: "days". Default: "days".
+          retention_value: 2              # (Optional) Number of units to retain. Default: 1.
+        }
+        daily: {
+          interval: 1                     # (Optional) Must be 1. Default: 1.
+          retention_unit: "days"          # (Optional) Retention unit. Values: "days". Default: "days".
+          retention_value: 7              # (Optional) Number of units to retain. Default: 7.
+        }
+        weekly: {
+          interval: 6                     # (Optional) Day of week (1=Sunday…7=Saturday). Default: 1.
+          retention_unit: "weeks"         # (Optional) Retention unit. Values: "weeks". Default: "weeks".
+          retention_value: 4              # (Optional) Number of units to retain. Default: 4.
+        }
+        monthly: {
+          interval: 28                    # (Optional) Day of month (1–28). Default: 1.
+          retention_unit: "months"        # (Optional) Retention unit. Values: "months". Default: "months".
+          retention_value: 12             # (Optional) Number of units to retain. Default: 12.
+        }
+        yearly: {
+          interval: 1                     # (Optional) Month of year (1–12). Default: 1.
+          retention_unit: "years"         # (Optional) Retention unit. Values: "years". Default: "years".
+          retention_value: 2              # (Optional) Number of units to retain. Default: 2.
+        }
+        on_demand: {
+          interval: 0                     # (Optional) Must be 0. Default: 1.
+          retention_unit: "days"          # (Optional) Retention unit. Values: "days". Default: "days".
+          retention_value: 7              # (Optional) Number of units to retain. Default: 7.
+        }
+      }
+
+      # Maintenance window
+      maintenance: {
+        enabled: false                    # (Optional) Enable scheduled maintenance window. Default: false.
+        day_of_week: 1                    # (Optional) Day of week (1=Sunday…7=Saturday). Default: 1.
+        hour_of_day: 0                    # (Optional) Hour in UTC (0–23). Default: 0.
+        defer: null                       # (Optional) Defer the next occurrence. Default: null.
+        auto_defer: null                  # (Optional) Automatically defer maintenance. Default: null.
+        auto_defer_once_enabled: null     # (Optional) Auto-defer once. Default: null.
+      }
+
+      # IP access list — map keyed by a unique entry ID.
+      # Each entry uses exactly one of: ip_address, cidr_block, aws_security_group.
+      access_list: {}
+      # access_list:
+      #   office:
+      #     cidr_block: "203.0.113.0/24"
+      #     comment: "Office network"
+      #   bastion:
+      #     ip_address: "198.51.100.5"
+      #     comment: "Bastion host"
+      #   app_sg:
+      #     aws_security_group: "sg-0abc123def456"
+      #     comment: "Application security group"
+
+      # Encryption at rest — set enabled: true and pair with encryption_provider
+      # and encryption_provider_config to activate CMK encryption.
+      encryption_at_rest: {
+        enabled: false                    # (Optional) Enable Customer-Managed Key encryption. Default: false.
+      }
+
+      # Alert event types excluded from this module's for_each loop.
+      # Use this when a cloud-specific companion module manages certain alert types
+      # to prevent resource conflicts.
+      excluded_alert_event_types: []     # (Optional) List of event_type strings to skip. Default: [].
+
+      # Alert configurations — list of alert rules.
+      alerts: []
+      # alerts:
+      #   - event_type: "REPLICATION_OPLOG_WINDOW_RUNNING_OUT"  # (Required) Atlas event type.
+      #     enabled: true                                        # (Optional) Default: true.
+      #     notifications:
+      #       - type_name: "GROUP"                              # (Required) Values: EMAIL, SMS, GROUP, ORG,
+      #                                                         #   TEAM, SLACK, DATADOG, OPS_GENIE,
+      #                                                         #   VICTOR_OPS, WEBHOOK, MICROSOFT_TEAMS, PAGER_DUTY.
+      #         roles: ["GROUP_OWNER"]
+      #         interval_min: 60
+      #         delay_min: 0
+      #         email_enabled: true
+      #     threshold_config:
+      #       operator: "LESS_THAN"                            # (Optional) Values: GREATER_THAN, LESS_THAN.
+      #       threshold: 1
+      #       units: "HOURS"
+    }
+
+    # ── Encryption provider ────────────────────────────────────────
+    # Plain string — must NOT reference cloud resource attributes to avoid dependency cycles.
+    encryption_provider: ""   # (Optional) Cloud provider for CMK encryption. Values: "AWS", "GCP", "AZURE". Default: "".
+
+    # Cloud-specific key configuration — populated by the cloud companion module
+    # after cloud_provider_setup outputs are available.
+    # (Sensitive — contains key ARNs / identifiers.)
+    encryption_provider_config: {}
+    # AWS:
+    #   iam_assumed_role_arn: ""          # (Required for AWS) IAM role ARN Atlas will assume.
+    #   customer_master_key_id: ""        # (Required for AWS) KMS CMK ARN.
+    #   region: "US_EAST_1"              # (Required for AWS) Atlas-format region (UPPER_UNDERSCORE).
+    # GCP:
+    #   key_version_resource_id: ""       # (Required for GCP) Full KMS crypto key version resource name.
+    # AZURE:
+    #   azure_environment: "AZURE"        # (Optional) Values: AZURE, AZURE_CHINA, AZURE_GERMANY, AZURE_US_GOVERNMENT.
+    #   subscription_id: ""              # (Required for AZURE) Azure subscription ID.
+    #   resource_group_name: ""          # (Required for AZURE) Resource group containing the Key Vault.
+    #   key_vault_name: ""               # (Required for AZURE) Key Vault name.
+    #   key_identifier: ""               # (Required for AZURE) Versioned Key Vault key URI.
+
+    # ── Import helper ──────────────────────────────────────────────
+    # generate_import: false  # (Optional) Output tofu import commands for existing alerts. Default: false.
+  }
+  ```
+
 examples: |-
+  ### Minimal project — org ID + default alerts
 
-# How to get started quickly
+  ```hcl
+  # inputs.yaml
+  organization_id: "5f1234abcd5678ef12345678"
+
+  settings:
+    default_alerts_settings: true
+    performance_advisor_enabled: true
+    schema_advisor_enabled: true
+  ```
+
+  ### Project with backup compliance and maintenance window
+
+  ```hcl
+  # inputs.yaml
+  organization_id: "5f1234abcd5678ef12345678"
+
+  settings:
+    backup_compliance:
+      enabled: true
+      authorized_user:
+        email: "admin@example.com"
+        first_name: "Jane"
+        last_name: "Doe"
+      pit_enabled: true
+      restore_window_days: 7
+      daily:
+        interval: 1
+        retention_unit: "days"
+        retention_value: 14
+      weekly:
+        interval: 7
+        retention_unit: "weeks"
+        retention_value: 8
+
+    maintenance:
+      enabled: true
+      day_of_week: 7    # Saturday
+      hour_of_day: 3    # 03:00 UTC
+  ```
+
+  ### Project with AWS KMS encryption at rest
+
+  ```hcl
+  # inputs.yaml (Atlas module)
+  organization_id: "5f1234abcd5678ef12345678"
+  encryption_provider: "AWS"
+
+  settings:
+    encryption_at_rest:
+      enabled: true
+
+  # encryption_provider_config is injected by the cloud companion module
+  # after it reads cloud_provider_setup_aws_account_arn and
+  # cloud_provider_setup_aws_external_id from this module's outputs.
+  ```
+
+  ### Alert with Slack notification
+
+  ```hcl
+  # inputs.yaml
+  settings:
+    alerts:
+      - event_type: "REPLICATION_OPLOG_WINDOW_RUNNING_OUT"
+        enabled: true
+        notifications:
+          - type_name: "SLACK"
+            api_token: "xoxb-..."
+            channel_name: "#atlas-alerts"
+            interval_min: 30
+            delay_min: 0
+        threshold_config:
+          operator: "LESS_THAN"
+          threshold: 1
+          units: "HOURS"
+  ```
+
+  ### IP access list with mixed entry types
+
+  ```hcl
+  # inputs.yaml
+  settings:
+    access_list:
+      office:
+        cidr_block: "203.0.113.0/24"
+        comment: "Corporate office CIDR"
+      bastion:
+        ip_address: "198.51.100.5"
+        comment: "Bastion host"
+      app_tier:
+        aws_security_group: "sg-0abc123def456"
+        comment: "Application security group"
+  ```
+
 quickstart: |-
+  1. **Initialise** the module using the MongoDB Atlas boilerplate:
+     ```sh
+     make init/mongodb
+     ```
+
+  2. **Configure** the deployment by editing `.boilerplate/inputs.yaml`.
+     At minimum set `organization_id` (or `organization_name`).
+
+  3. **Format and lint** before committing:
+     ```sh
+     make fmt
+     make lint
+     ```
+
+  4. **Apply** via Terragrunt from the deployment directory:
+     ```sh
+     terragrunt apply
+     ```
+
+  5. **(Optional) Import existing alerts** — set `generate_import: true`, apply once,
+     then copy the `imported_alert_statement` output into your shell:
+     ```sh
+     terragrunt output -raw imported_alert_statement | bash
+     ```
+     Copy `imported_alert_json` into `settings.alerts` in `inputs.yaml`, then set
+     `generate_import: false` and apply again.
+
+  ### Outputs reference
+
+  | Output | Description |
+  |---|---|
+  | `project_name` | Resolved Atlas project name |
+  | `project_id` | MongoDB Atlas project ID |
+  | `project_creation_timestamp` | ISO-8601 creation timestamp |
+  | `project_backup_policy_id` | Backup compliance policy ID (null when disabled) |
+  | `cloud_provider_setup_role_id` | Atlas role ID from cloud provider access setup |
+  | `cloud_provider_setup_aws_account_arn` | Atlas AWS account ARN for IAM trust policy (AWS) |
+  | `cloud_provider_setup_aws_external_id` | External ID for STS AssumeRole condition (AWS) |
+  | `cloud_provider_setup_gcp_service_account` | Atlas GCP SA email — grant `roles/cloudkms.cryptoKeyEncrypterDecrypter` (GCP) |
+  | `cloud_provider_setup_azure_app_id` | Atlas Azure app ID / `client_id` (AZURE) |
+  | `cloud_provider_setup_azure_service_principal_id` | Atlas Azure SP object ID — grant Key Vault access (AZURE) |
+  | `cloud_provider_setup_azure_tenant_id` | Azure AD tenant ID (AZURE) |
+  | `encryption_at_rest_id` | Encryption-at-rest configuration ID |
+  | `all_alert_configurations` | Raw alert configurations (used by cloud companion modules) |
+  | `imported_alert_statement` | `tofu import` commands for existing alerts (when `generate_import = true`) |
+  | `imported_alert_json` | JSON of current alerts for copying into `settings.alerts` (when `generate_import = true`) |
 
 include:
   - "docs/targets.md"
