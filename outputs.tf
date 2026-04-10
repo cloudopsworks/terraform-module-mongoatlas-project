@@ -8,19 +8,23 @@
 #
 
 output "project_name" {
-  value = mongodbatlas_project.this.name
+  description = "Resolved MongoDB Atlas project name"
+  value       = mongodbatlas_project.this.name
 }
 
 output "project_id" {
-  value = mongodbatlas_project.this.id
+  description = "MongoDB Atlas project ID"
+  value       = mongodbatlas_project.this.id
 }
 
 output "project_creation_timestamp" {
-  value = mongodbatlas_project.this.created
+  description = "ISO-8601 timestamp of when the Atlas project was created"
+  value       = mongodbatlas_project.this.created
 }
 
 output "project_backup_policy_id" {
-  value = try(var.settings.backup_compliance.enabled, false) ? mongodbatlas_backup_compliance_policy.this[0].id : null
+  description = "Backup compliance policy ID; null when backup compliance is disabled"
+  value       = try(var.settings.backup_compliance.enabled, false) ? mongodbatlas_backup_compliance_policy.this[0].id : null
 }
 
 output "cloud_provider_setup_role_id" {

@@ -63,9 +63,9 @@
 | <a name="output_cloud_provider_setup_gcp_service_account"></a> [cloud\_provider\_setup\_gcp\_service\_account](#output\_cloud\_provider\_setup\_gcp\_service\_account) | Atlas GCP service account email — grant this SA roles/cloudkms.cryptoKeyEncrypterDecrypter on the KMS key (GCP) |
 | <a name="output_cloud_provider_setup_role_id"></a> [cloud\_provider\_setup\_role\_id](#output\_cloud\_provider\_setup\_role\_id) | MongoDB Atlas role ID from the cloud provider access setup |
 | <a name="output_encryption_at_rest_id"></a> [encryption\_at\_rest\_id](#output\_encryption\_at\_rest\_id) | MongoDB Atlas encryption-at-rest configuration ID |
-| <a name="output_imported_alert_json"></a> [imported\_alert\_json](#output\_imported\_alert\_json) | n/a |
-| <a name="output_imported_alert_statement"></a> [imported\_alert\_statement](#output\_imported\_alert\_statement) | n/a |
-| <a name="output_project_backup_policy_id"></a> [project\_backup\_policy\_id](#output\_project\_backup\_policy\_id) | n/a |
-| <a name="output_project_creation_timestamp"></a> [project\_creation\_timestamp](#output\_project\_creation\_timestamp) | n/a |
-| <a name="output_project_id"></a> [project\_id](#output\_project\_id) | n/a |
-| <a name="output_project_name"></a> [project\_name](#output\_project\_name) | n/a |
+| <a name="output_imported_alert_json"></a> [imported\_alert\_json](#output\_imported\_alert\_json) | JSON representation of current Atlas alert configurations suitable for copying into settings.alerts (only populated when generate\_import = true) |
+| <a name="output_imported_alert_statement"></a> [imported\_alert\_statement](#output\_imported\_alert\_statement) | Ready-to-run `tofu import` commands for every existing alert in the project (only populated when generate\_import = true) |
+| <a name="output_project_backup_policy_id"></a> [project\_backup\_policy\_id](#output\_project\_backup\_policy\_id) | Backup compliance policy ID; null when backup compliance is disabled |
+| <a name="output_project_creation_timestamp"></a> [project\_creation\_timestamp](#output\_project\_creation\_timestamp) | ISO-8601 timestamp of when the Atlas project was created |
+| <a name="output_project_id"></a> [project\_id](#output\_project\_id) | MongoDB Atlas project ID |
+| <a name="output_project_name"></a> [project\_name](#output\_project\_name) | Resolved MongoDB Atlas project name |
