@@ -78,9 +78,11 @@ data "mongodbatlas_alert_configurations" "import" {
 }
 
 output "imported_alert_statement" {
-  value = var.generate_import ? join("\n", local.import_statements) : null
+  description = "Ready-to-run `tofu import` commands for every existing alert in the project (only populated when generate_import = true)"
+  value       = var.generate_import ? join("\n", local.import_statements) : null
 }
 
 output "imported_alert_json" {
-  value = var.generate_import ? nonsensitive(jsonencode(local.alert_yaml)) : null
+  description = "JSON representation of current Atlas alert configurations suitable for copying into settings.alerts (only populated when generate_import = true)"
+  value       = var.generate_import ? nonsensitive(jsonencode(local.alert_yaml)) : null
 }
